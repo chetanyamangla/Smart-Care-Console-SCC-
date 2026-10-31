@@ -1,0 +1,19 @@
+Log file created at: 2025/11/13 21:14:59  PID: 8244
+Running on machine: CHETANYA
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I1113 21:14:59.161422 21812 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], version: V1.0.1 
+ 
+I1113 21:15:13.477461 21812 UniOneDebugToolDlg.cpp:957] in function[CUniOneDebugToolDlg::StartBurn], opening Serial Port 12 
+I1113 21:15:13.531847 21812 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], COM put_setting 921600, N, 8, 1 port:12 
+ 
+I1113 21:15:16.429483 18668 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], COM12 XmodermSendFile detected CCC, start send file 
+ 
+I1113 21:15:16.476673 18668 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], COM12 ReadSendFile D:\PUDDING\output\output\uni_app_release_update.bin m_iTransferTimes finished 1274 
+ 
+I1113 21:16:27.435497 21812 UniOneDebugToolDlg.cpp:957] in function[CUniOneDebugToolDlg::StartBurn], opening Serial Port 12 
+I1113 21:16:27.459915 21812 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], COM put_setting 921600, N, 8, 1 port:12 
+ 
+I1113 21:16:30.138859 18668 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], COM12 XmodermSendFile detected CCC, start send file 
+ 
+I1113 21:16:30.186964 18668 code_page.cpp:268] in function[Unisound::OutputDebugPrintf], COM12 ReadSendFile D:\sea(senior ease assist)\output\output\uni_app_release_update.bin m_iTransferTimes finished 1282 
+ 
