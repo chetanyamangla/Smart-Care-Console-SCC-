@@ -1,0 +1,14 @@
+SMART CARE CONSOLE (SCC) – PIN CONNECTION DIAGRAM
+
+Appliance / Component       ESP32 GPIO       Arduino UNO Pin
+
+LED Relay Input             GPIO 18          D3
+LCD / TV Relay Input        GPIO 4           D4
+Fan Relay Input             GPIO 5           D6
+Massager Relay Input        GPIO 19          D5
+IR Eye Sensor (Analog Out)  —                A0
+Buzzer                      —                D13
+AI-PCM03 TX                 —                RX (D0)
+AI-PCM03 RX                 —                TX (D1)
+
+
