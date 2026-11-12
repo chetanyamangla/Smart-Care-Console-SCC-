@@ -1,7 +1,7 @@
 #include <Arduino.h>
-#define BLYNK_TEMPLATE_ID "TMPL3DxjUcaz4"
-#define BLYNK_TEMPLATE_NAME "Voice Assistant"
-#define BLYNK_AUTH_TOKEN "URCcPi2gGaYQ9BEXXkV9qivThJViSq6j"
+#define BLYNK_TEMPLATE_ID "YOUR_BLYNK_TEMPLATE_ID"
+#define BLYNK_TEMPLATE_NAME "YOUR_BLYNK_TEMPLATE_NAME"
+#define BLYNK_AUTH_TOKEN "YOUR_BLYNK_AUTH_TOKEN"
 #define BLYNK_PRINT Serial
 #include <WiFi.h>
 #include <BlynkSimpleEsp32.h>
@@ -9,8 +9,8 @@
 #include <Preferences.h>
 #include <time.h>
 
-char ssid[] = "CHETANYA_WIFI";
-char pass[] = "120812@@";
+char ssid[] = "YOUR_SSID";
+char pass[] = "YOUR_SSID_PASSWORD";
 const char *TIME_ZONE = "IST-5:30";
 
 const int LED_PIN = 18, FAN_PIN = 5, TV_PIN = 4, MASSAGER_PIN = 19;
