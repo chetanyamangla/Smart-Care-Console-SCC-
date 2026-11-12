@@ -21,9 +21,6 @@ A medicine box with preloaded prescriptions to help users organize and manage th
 
 ## Future Upgrades
 
-### 1. Holographic Interactive Interface
-A futuristic, holographic mat-like interface designed to provide a more interactive way of controlling the system.
-
 ### 2. Wearable Health Monitoring Wristband
 A wearable wristband equipped with a heart-rate sensor and accelerometer to monitor basic health and movement-related information.
 
@@ -43,8 +40,6 @@ The current prototype includes:
 - Voice-controlled appliance operation.
 - Eye-blink-based appliance control.
 - Smart medicine box with preloaded prescriptions.
-
-The holographic interactive interface and wearable health-monitoring wristband are planned future upgrades.
 
 
 ## Project Documentation
