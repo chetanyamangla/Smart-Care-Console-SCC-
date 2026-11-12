@@ -1,0 +1,15 @@
+﻿Record type,No.,Component / description,Quantity,Status,Estimated cost (INR),Reference price (CNY),Retailer,Country of import,Product link,Notes
+BOM item,1,"Huawei Watch D2 – LCA-B11, Light Gold",1,New purchase required,54110.53,2988,Ubuy India,Japan,https://www.ubuy.co.in/productjp/NGM72D728-huawei-huawei-huawei-watch-d2-wearable-blood-pressure-monitor-lca-b11-light-gold,"CNY 2,988 is the watch product-price reference only. INR 54,110.53 is the estimated total procurement budget including provisional customs allowance."
+BOM item,2,ESP32 development board,Existing,Already available,,,,,,Reused from the existing SCC prototype.
+BOM item,3,Relay modules,Existing,Already available,,,,,,Reused from the existing SCC prototype.
+BOM item,4,Servo motors,Existing,Already available,,,,,,Reused from the existing SCC prototype.
+BOM item,5,Medicine box mechanism,Existing,Already available,,,,,,Reused from the existing SCC prototype.
+BOM item,6,Existing voice-control hardware,Existing,Already available,,,,,,Reused from the existing SCC prototype.
+BOM item,7,Existing eye-blink control hardware,Existing,Already available,,,,,,Reused from the existing SCC prototype.
+BOM item,8,Android smartphone,1,User-provided,,,,,,User's existing Android smartphone will serve as the main interface.
+Purchase cost breakdown,,Product subtotal,1,Quoted checkout component,34379,,Ubuy India,Japan,,Amount shown in the user's Ubuy checkout.
+Purchase cost breakdown,,Shipping and handling,,Quoted checkout component,3964.7,,Ubuy India,Japan,,Amount shown in the user's Ubuy checkout.
+Purchase cost breakdown,,Tax,,Quoted checkout component,766.83,,Ubuy India,Japan,,Amount shown in the user's Ubuy checkout.
+Purchase cost breakdown,,Ubuy checkout grand total,,Checkout total,39110.53,,Ubuy India,Japan,,"Sum of product subtotal, shipping and handling, and tax."
+Purchase cost breakdown,,Estimated customs/import duties,,Provisional allowance – not confirmed assessment,15000,,,India,,Actual charges may vary depending on applicable import duties and courier fees.
+Purchase cost breakdown,,Total estimated procurement cost,,Provisional total,54110.53,,Ubuy India,Japan to India,,"Includes the Ubuy checkout grand total plus the provisional ₹15,000 customs/import allowance."
