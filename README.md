@@ -55,3 +55,8 @@ The following materials will be added as the project develops:
 
 **Project Name:** Smart Care Console (SCC)  
 **Project Type:** Assistive Technology / Smart Home Automation
+
+
+## Project Prototype
+
+![SCC Smart Care Console Prototype](images/WhatsApp%20Image%202026-10-31%20at%2011.32.32%20PM%20(2).jpeg)
