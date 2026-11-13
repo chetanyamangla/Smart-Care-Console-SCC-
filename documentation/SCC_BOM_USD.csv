@@ -1,5 +1,5 @@
 Record type,No.,Component / description,Quantity,Status,Estimated cost (USD),Reference price (CNY),Retailer,Country of import,Product link,Notes
-BOM item,1,"Huawei Watch D2 – LCA-B11, Light Gold",1,New purchase required,575.14,2988.0,Ubuy India,Japan,https://www.ubuy.co.in/productjp/NGM72D728-huawei-huawei-huawei-watch-d2-wearable-blood-pressure-monitor-lca-b11-light-gold,"CNY 2,988 is the watch product-price reference only. USD 575.14 is the estimated total procurement budget including a provisional customs allowance."
+BOM item,1,"Huawei Watch D2 – LCA-B11, Light Gold",1,New purchase required,365.41,2988.0,Ubuy India,Japan,https://www.ubuy.co.in/productjp/NGM72D728-huawei-huawei-huawei-watch-d2-wearable-blood-pressure-monitor-lca-b11-light-gold,"CNY 2,988 is the watch product-price reference only. USD 575.14 is the estimated total procurement budget including a provisional customs allowance."
 BOM item,2,ESP32 development board,Existing,Already available,,,,,,Reused from the existing SCC prototype.
 BOM item,3,Relay modules,Existing,Already available,,,,,,Reused from the existing SCC prototype.
 BOM item,4,Servo motors,Existing,Already available,,,,,,Reused from the existing SCC prototype.
