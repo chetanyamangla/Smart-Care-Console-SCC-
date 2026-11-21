@@ -13,26 +13,47 @@ uint8_t RECEIVER_MAC[] = {
   0xxx, 0xxx, 0xxx
 };
 
-// Set to the receiver's actual Wi-Fi channel
+// Must match receiver's actual Wi-Fi channel
 #define GLASSES_WIFI_CHANNEL 1
 
-// Original blink variables
+// ==================================================
+// EYE DETECTION SETTINGS
+// ==================================================
+
+#define EYE_CLOSED_THRESHOLD 400
+#define HOLD_TIME 3000
+#define BLINK_MIN_TIME 100
+#define BLINK_MAX_TIME 800
+#define BLINK_WAIT_TIME 2000
+
+// LOW = OPEN
+// HIGH = CLOSED
+
 bool commandMode = false;
-bool eyeWasClosed = false;
+
+// Initial hold detection
+bool holdArmed = false;
+bool holdTiming = false;
 
 unsigned long eyeCloseStart = 0;
+
+// Blink detection (separate from hold detection)
+bool blinkEyeClosed = false;
 unsigned long blinkStart = 0;
 unsigned long lastBlinkTime = 0;
 
 int blinkCount = 0;
-int lastEyeState = LOW;
 
-// LOW = OPEN, HIGH = CLOSED
-
-// Ignore the release of the 3-second hold
+// Ignore the long hold that activated command mode
 bool waitForEyeOpen = false;
 
-// ESP-NOW packet (matches receiver)
+// For eye-state monitoring
+int lastEyeState = -1;
+
+// ==================================================
+// ESP-NOW PACKET
+// ==================================================
+
 struct BlinkPacket {
   uint32_t magic;
   uint32_t sequence;
@@ -44,14 +65,20 @@ const uint32_t BLINK_MAGIC = 0xB11A2026;
 uint32_t sequenceNumber = 0;
 bool espNowReady = false;
 
-// Original buzzer function
+// ==================================================
+// BUZZER
+// ==================================================
+
 void beep(int t) {
+
   digitalWrite(BUZZER, HIGH);
   delay(t);
   digitalWrite(BUZZER, LOW);
 }
 
-/* ---------- ESP-NOW TRANSMISSION ---------- */
+// ==================================================
+// ESP-NOW TRANSMISSION
+// ==================================================
 
 void sendBlinkCommand(uint8_t command) {
 
@@ -66,7 +93,7 @@ void sendBlinkCommand(uint8_t command) {
     command
   };
 
-  // Three attempts, same sequence number
+  // Three attempts using the same sequence number
   for (int attempt = 0; attempt < 3; attempt++) {
 
     esp_err_t result = esp_now_send(
@@ -82,6 +109,7 @@ void sendBlinkCommand(uint8_t command) {
     Serial.print(attempt + 1);
 
     Serial.print(" Queued: ");
+
     Serial.println(
       result == ESP_OK ? "YES" : "NO"
     );
@@ -90,7 +118,127 @@ void sendBlinkCommand(uint8_t command) {
   }
 }
 
-/* ---------- SETUP ---------- */
+// ==================================================
+// ENTER COMMAND MODE
+// ==================================================
+
+void enterCommandMode() {
+
+  commandMode = true;
+
+  blinkCount = 0;
+  blinkEyeClosed = false;
+
+  lastBlinkTime = millis();
+
+  // Disarm the next hold until eyes are open again.
+  holdArmed = false;
+  holdTiming = false;
+
+  // Ignore the release of the 3-second hold.
+  waitForEyeOpen = true;
+
+  Serial.println();
+  Serial.println("================================");
+  Serial.println(">>> COMMAND MODE ENTERED");
+  Serial.println("================================");
+
+  beep(500);
+}
+
+// ==================================================
+// EXIT COMMAND MODE
+// ==================================================
+
+void exitCommandMode() {
+
+  commandMode = false;
+
+  blinkCount = 0;
+  blinkEyeClosed = false;
+
+  waitForEyeOpen = false;
+
+  // A fresh open-eye detection is required
+  // before another 3-second hold can begin.
+  holdArmed = false;
+  holdTiming = false;
+
+  Serial.println();
+  Serial.println("================================");
+  Serial.println("<<< COMMAND MODE EXITED");
+  Serial.println("================================");
+
+  delay(500);
+}
+
+// ==================================================
+// EXECUTE BLINK COMMAND
+// ==================================================
+
+void executeBlinkCommand() {
+
+  Serial.println();
+  Serial.print("Executing command for ");
+  Serial.print(blinkCount);
+  Serial.println(" blinks");
+
+  switch (blinkCount) {
+
+    case 1:
+      Serial.println("LIGHT ON");
+      break;
+
+    case 2:
+      Serial.println("LIGHT OFF");
+      break;
+
+    case 3:
+      Serial.println("FAN ON");
+      break;
+
+    case 4:
+      Serial.println("FAN OFF");
+      break;
+
+    case 5:
+      Serial.println("TV ON");
+      break;
+
+    case 6:
+      Serial.println("TV OFF");
+      break;
+
+    case 7:
+      Serial.println("MASSAGER ON");
+      break;
+
+    case 8:
+      Serial.println("MASSAGER OFF");
+      break;
+
+    default:
+      Serial.println("INVALID COMMAND");
+
+      beep(150);
+      beep(150);
+      break;
+  }
+
+  // Send valid command wirelessly.
+  if (blinkCount >= 1 && blinkCount <= 8) {
+
+    sendBlinkCommand(blinkCount);
+  }
+
+  beep(300);
+
+  exitCommandMode();
+}
+
+// ==================================================
+// SETUP
+// ==================================================
 
 void setup() {
 
@@ -101,15 +249,15 @@ void setup() {
 
   Serial.begin(9600);
 
-  Serial.println(
-    "=== Eye Controlled System Started ==="
-  );
+  Serial.println();
+  Serial.println("=== Eye Controlled System Started ===");
+
+  Serial.println("Waiting for eyes to be detected OPEN.");
 
   beep(200);
 
   WiFi.mode(WIFI_STA);
 
-  // Prioritize accurate ESP-NOW communication
   WiFi.setSleep(false);
 
   esp_wifi_set_channel(
@@ -139,26 +287,31 @@ void setup() {
   Serial.println(WiFi.macAddress());
 
   Serial.print("ESP-NOW Ready: ");
+
   Serial.println(
     espNowReady ? "YES" : "NO"
   );
 }
 
-/* ---------- MAIN LOOP ---------- */
+// ==================================================
+// MAIN LOOP
+// ==================================================
 
 void loop() {
+
+  unsigned long now = millis();
 
   int sensorValue = analogRead(IR);
 
   int eyeState =
-    (sensorValue < 400) ? HIGH : LOW;
+    (sensorValue < EYE_CLOSED_THRESHOLD) ? HIGH : LOW;
 
   // HIGH = CLOSED
   // LOW = OPEN
 
-  unsigned long now = millis();
-
-  /* ---------- EYE STATE MONITOR ---------- */
+  // ----------------------------------------------
+  // EYE STATE MONITOR
+  // ----------------------------------------------
 
   if (eyeState != lastEyeState) {
 
@@ -171,94 +324,123 @@ void loop() {
     lastEyeState = eyeState;
   }
 
-  /* ---------- COMMAND MODE ENTRY ---------- */
+  // ==================================================
+  // NORMAL MODE: DETECT 3-SECOND EYE CLOSURE
+  // ==================================================
 
   if (!commandMode) {
 
-    if (eyeState == HIGH) {
+    // First, eyes must be detected OPEN.
+    // This prevents automatic activation at startup
+    // when the sensor initially reports CLOSED.
 
-      if (!eyeWasClosed) {
-
-        eyeCloseStart = millis();
-        eyeWasClosed = true;
-
-        Serial.println(
-          "3-second hold started"
-        );
-      }
-
-      // Activate WHILE eye is still closed
-      if (millis() - eyeCloseStart >= 3000) {
-
-        commandMode = true;
-        blinkCount = 0;
-        lastBlinkTime = millis();
-
-        Serial.println(
-          ">>> COMMAND MODE ENTERED"
-        );
-
-        // Immediate 500 ms confirmation beep
-        beep(500);
-
-        // Do not count the long hold as a blink
-        waitForEyeOpen = true;
-
-        return;
-      }
-
-    } else {
-
-      eyeWasClosed = false;
-    }
-
-    return;
-  }
-
-  /* ---------- BLINK DETECTION ---------- */
-
-  if (commandMode) {
-
-    // Command mode is already active.
-    // Wait only to ignore the original
-    // long eye closure.
-
-    if (waitForEyeOpen) {
+    if (!holdArmed) {
 
       if (eyeState == LOW) {
 
-        waitForEyeOpen = false;
-        eyeWasClosed = false;
+        holdArmed = true;
+        holdTiming = false;
 
         Serial.println(
-          "Ready to count blinks"
+          "System armed. Close eyes for 3 seconds."
         );
       }
 
       return;
     }
 
-    if (eyeState == HIGH && !eyeWasClosed) {
+    // Start timing only when eyes actually close.
+    if (eyeState == HIGH) {
 
-      blinkStart = now;
-      eyeWasClosed = true;
+      if (!holdTiming) {
+
+        eyeCloseStart = now;
+        holdTiming = true;
+
+        Serial.println(
+          "3-second eye closure started."
+        );
+      }
+
+      // Enter command mode only if eyes remain
+      // continuously CLOSED for at least 3 seconds.
+
+      if (now - eyeCloseStart >= HOLD_TIME) {
+
+        enterCommandMode();
+
+        return;
+      }
+
+    } else {
+
+      // Eyes opened before 3 seconds:
+      // cancel the hold timer.
+
+      if (holdTiming) {
+
+        Serial.println(
+          "Hold cancelled. Eyes opened too early."
+        );
+      }
+
+      holdTiming = false;
     }
 
-    if (eyeState == LOW && eyeWasClosed) {
+    return;
+  }
+
+  // ==================================================
+  // COMMAND MODE
+  // ==================================================
+
+  if (commandMode) {
+
+    // Ignore the release of the original
+    // 3-second closure.
+
+    if (waitForEyeOpen) {
+
+      if (eyeState == LOW) {
+
+        waitForEyeOpen = false;
+
+        blinkEyeClosed = false;
+
+        Serial.println(
+          "Ready to count blinks."
+        );
+      }
+
+      return;
+    }
+
+    // ----------------------------------------------
+    // BLINK DETECTION
+    // ----------------------------------------------
+
+    if (eyeState == HIGH && !blinkEyeClosed) {
+
+      blinkStart = now;
+      blinkEyeClosed = true;
+    }
+
+    if (eyeState == LOW && blinkEyeClosed) {
 
       unsigned long blinkDuration =
         now - blinkStart;
 
-      eyeWasClosed = false;
+      blinkEyeClosed = false;
 
       Serial.print("Blink Duration: ");
       Serial.print(blinkDuration);
       Serial.println(" ms");
 
-      if (blinkDuration >= 100 &&
-          blinkDuration <= 800) {
+      if (blinkDuration >= BLINK_MIN_TIME &&
+          blinkDuration <= BLINK_MAX_TIME) {
 
         blinkCount++;
+
         lastBlinkTime = now;
 
         Serial.print("Blink COUNTED: ");
@@ -272,82 +454,16 @@ void loop() {
       }
     }
 
-    /* ---------- COMMAND EXECUTION ---------- */
+    // ----------------------------------------------
+    // EXECUTE COMMAND AFTER 2 SECONDS
+    // ----------------------------------------------
 
     if (blinkCount > 0 &&
-        (now - lastBlinkTime > 2000)) {
+        (now - lastBlinkTime >= BLINK_WAIT_TIME)) {
 
-      Serial.print("Executing command for ");
-      Serial.print(blinkCount);
-      Serial.println(" blinks");
+      executeBlinkCommand();
 
-      if (blinkCount == 1) {
-
-        Serial.println("LIGHT ON");
-
-      }
-      else if (blinkCount == 2) {
-
-        Serial.println("LIGHT OFF");
-
-      }
-      else if (blinkCount == 3) {
-
-        Serial.println("FAN ON");
-
-      }
-      else if (blinkCount == 4) {
-
-        Serial.println("FAN OFF");
-
-      }
-      else if (blinkCount == 5) {
-
-        Serial.println("TV ON");
-
-      }
-      else if (blinkCount == 6) {
-
-        Serial.println("TV OFF");
-
-      }
-      else if (blinkCount == 7) {
-
-        Serial.println("MASSAGER ON");
-
-      }
-      else if (blinkCount == 8) {
-
-        Serial.println("MASSAGER OFF");
-
-      }
-      else {
-
-        Serial.println("INVALID COMMAND");
-
-        beep(150);
-        beep(150);
-      }
-
-      // Send valid command wirelessly
-      if (blinkCount >= 1 &&
-          blinkCount <= 8) {
-
-        sendBlinkCommand(blinkCount);
-      }
-
-      beep(300);
-
-      blinkCount = 0;
-      commandMode = false;
-      eyeWasClosed = false;
-      waitForEyeOpen = false;
-
-      Serial.println(
-        "<<< COMMAND MODE EXITED"
-      );
-
-      delay(500);
+      return;
     }
   }
 }
