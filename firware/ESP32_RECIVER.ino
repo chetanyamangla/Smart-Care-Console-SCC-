@@ -18,13 +18,12 @@
 
 // ---------------- WIFI AND TIME ----------------
 
-char ssid[] = "YOUR_SSID";
-char pass[] = "YOUR_SSID_PASSWORD";
+char ssid[] = "YOUR_WIFI_NAME";
+char pass[] = "YOUR_WIFI_PASSWORD";
 
 const char *TIME_ZONE = "IST-5:30";
 
 // Must match the transmitter's channel.
-// Your transmitter currently uses channel 1.
 #define GLASSES_WIFI_CHANNEL 1
 
 // ---------------- APPLIANCE GPIO PINS ----------------
@@ -33,6 +32,33 @@ const int LED_PIN = 18;
 const int FAN_PIN = 5;
 const int TV_PIN = 4;
 const int MASSAGER_PIN = 19;
+
+// ---------------- RELAY POLARITY ----------------
+
+// Light and TV: active HIGH
+// Fan and massager: active LOW
+
+void setApplianceOutput(int gpio, int state) {
+
+  bool activeLow = (gpio == FAN_PIN || gpio == MASSAGER_PIN);
+
+  int outputLevel;
+
+  if (state == 1) {
+    outputLevel = activeLow ? LOW : HIGH;
+  } else {
+    outputLevel = activeLow ? HIGH : LOW;
+  }
+
+  digitalWrite(gpio, outputLevel);
+
+  Serial.printf(
+    "GPIO %d | Logical state: %s | Physical output: %s\n",
+    gpio,
+    state ? "ON" : "OFF",
+    outputLevel == HIGH ? "HIGH" : "LOW"
+  );
+}
 
 // ---------------- MEDICINE BOX GPIO PINS ----------------
 
@@ -59,8 +85,6 @@ const uint32_t SERVO2_REVERSE_START = 2000;
 
 // ---------------- ESP-NOW SETTINGS ----------------
 
-// EXACT packet structure used by your ESP32-C3 transmitter.
-
 struct BlinkPacket {
   uint32_t magic;
   uint32_t sequence;
@@ -72,7 +96,6 @@ const uint32_t BLINK_MAGIC = 0xB11A2026;
 static_assert(sizeof(BlinkPacket) == 9,
               "BlinkPacket size mismatch");
 
-// Receive command data safely from the ESP-NOW callback.
 portMUX_TYPE espNowMux = portMUX_INITIALIZER_UNLOCKED;
 
 volatile bool commandPending = false;
@@ -138,14 +161,9 @@ void onEspNowReceive(
   BlinkPacket packet;
   memcpy(&packet, data, sizeof(packet));
 
-  // Validate the transmitter's magic value.
   if (packet.magic != BLINK_MAGIC) {
     return;
   }
-
-  // Ignore duplicate transmissions.
-  // Your transmitter sends each command three times
-  // using the same sequence number.
 
   if (packet.sequence == lastReceivedSequence) {
     return;
@@ -211,56 +229,56 @@ void processEspNowCommand() {
     case 1:
       name = "LIGHT ON";
       gpio = LED_PIN;
-      value = HIGH;
+      value = 1;
       virtualPin = V0;
       break;
 
     case 2:
       name = "LIGHT OFF";
       gpio = LED_PIN;
-      value = LOW;
+      value = 0;
       virtualPin = V0;
       break;
 
     case 3:
       name = "FAN ON";
       gpio = FAN_PIN;
-      value = HIGH;
+      value = 1;
       virtualPin = V1;
       break;
 
     case 4:
       name = "FAN OFF";
       gpio = FAN_PIN;
-      value = LOW;
+      value = 0;
       virtualPin = V1;
       break;
 
     case 5:
       name = "TV ON";
       gpio = TV_PIN;
-      value = HIGH;
+      value = 1;
       virtualPin = V2;
       break;
 
     case 6:
       name = "TV OFF";
       gpio = TV_PIN;
-      value = LOW;
+      value = 0;
       virtualPin = V2;
       break;
 
     case 7:
       name = "MASSAGER ON";
       gpio = MASSAGER_PIN;
-      value = HIGH;
+      value = 1;
       virtualPin = V3;
       break;
 
     case 8:
       name = "MASSAGER OFF";
       gpio = MASSAGER_PIN;
-      value = LOW;
+      value = 0;
       virtualPin = V3;
       break;
 
@@ -268,19 +286,13 @@ void processEspNowCommand() {
       return;
   }
 
-  // Control the appliance.
-  digitalWrite(gpio, value);
+  // Apply the correct relay polarity.
+  setApplianceOutput(gpio, value);
 
   Serial.print("Executed: ");
   Serial.println(name);
 
-  Serial.print("GPIO ");
-  Serial.print(gpio);
-  Serial.print(" = ");
-  Serial.println(value == HIGH ? "HIGH" : "LOW");
-
-  // Update the Blynk dashboard to reflect the
-  // appliance state changed by the eye-blink system.
+  // Update Blynk using logical ON/OFF values.
   if (Blynk.connected()) {
     Blynk.virtualWrite(virtualPin, value);
   }
@@ -294,6 +306,7 @@ void processEspNowCommand() {
 // ==================================================
 
 void buzzerOutput(bool on) {
+
   digitalWrite(
     BUZZER_PIN,
     (on == BUZZER_ACTIVE_HIGH) ? HIGH : LOW
@@ -476,9 +489,7 @@ void serviceAlarms() {
         servo2.writeMicroseconds(STOP_PULSE);
         a.stage = 1;
 
-        Serial.println(
-          "Servo 2 STOP after forward 366 ms"
-        );
+        Serial.println("Servo 2 STOP after forward 366 ms");
       }
 
       if (a.stage == 1 &&
@@ -487,9 +498,7 @@ void serviceAlarms() {
         servo2.writeMicroseconds(REVERSE_PULSE);
         a.stage = 2;
 
-        Serial.println(
-          "Servo 2 REVERSE for 366 ms"
-        );
+        Serial.println("Servo 2 REVERSE for 366 ms");
       }
 
       if (a.stage == 2 &&
@@ -498,9 +507,7 @@ void serviceAlarms() {
         servo2.writeMicroseconds(STOP_PULSE);
         a.stage = 3;
 
-        Serial.println(
-          "Servo 2 STOP after reverse"
-        );
+        Serial.println("Servo 2 STOP after reverse");
       }
     }
 
@@ -521,15 +528,14 @@ void appliance(
   int value
 ) {
 
-  digitalWrite(gpio, value ? HIGH : LOW);
+  // Same polarity correction as ESP-NOW.
+  setApplianceOutput(gpio, value);
 
   Serial.printf(
-    "Blynk V%d %s = %d, GPIO%d = %d\n",
+    "Blynk V%d %s = %s\n",
     virtualPin,
     name,
-    value,
-    gpio,
-    digitalRead(gpio)
+    value ? "ON" : "OFF"
   );
 }
 
@@ -575,9 +581,7 @@ BLYNK_WRITE(V9) {
 
 BLYNK_CONNECTED() {
 
-  Serial.println(
-    "Blynk connected; syncing dashboard"
-  );
+  Serial.println("Blynk connected; syncing dashboard");
 
   Blynk.syncAll();
 }
@@ -672,16 +676,16 @@ void setup() {
   Serial.println("==================================");
 
   // Appliance GPIO setup.
-  for (int p : {
-    LED_PIN,
-    FAN_PIN,
-    TV_PIN,
-    MASSAGER_PIN
-  }) {
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(FAN_PIN, OUTPUT);
+  pinMode(TV_PIN, OUTPUT);
+  pinMode(MASSAGER_PIN, OUTPUT);
 
-    pinMode(p, OUTPUT);
-    digitalWrite(p, LOW);
-  }
+  // Initialize every appliance to logical OFF.
+  setApplianceOutput(LED_PIN, 0);
+  setApplianceOutput(FAN_PIN, 0);
+  setApplianceOutput(TV_PIN, 0);
+  setApplianceOutput(MASSAGER_PIN, 0);
 
   // Buzzer setup.
   pinMode(BUZZER_PIN, OUTPUT);
@@ -739,7 +743,6 @@ void setup() {
   Serial.print("Receiver MAC Address: ");
   Serial.println(WiFi.macAddress());
 
-  // Set channel before connecting to Wi-Fi.
   esp_err_t channelResult = esp_wifi_set_channel(
     GLASSES_WIFI_CHANNEL,
     WIFI_SECOND_CHAN_NONE
@@ -751,7 +754,6 @@ void setup() {
     channelResult == ESP_OK ? "SUCCESS" : "FAILED"
   );
 
-  // Initialize ESP-NOW.
   if (esp_now_init() == ESP_OK) {
 
     Serial.println("ESP-NOW initialization: SUCCESS");
@@ -763,22 +765,16 @@ void setup() {
 
       espNowReady = true;
 
-      Serial.println(
-        "ESP-NOW receive callback: REGISTERED"
-      );
+      Serial.println("ESP-NOW receive callback: REGISTERED");
 
     } else {
 
-      Serial.println(
-        "ESP-NOW receive callback: FAILED"
-      );
+      Serial.println("ESP-NOW receive callback: FAILED");
     }
 
   } else {
 
-    Serial.println(
-      "ESP-NOW initialization: FAILED"
-    );
+    Serial.println("ESP-NOW initialization: FAILED");
   }
 
   Serial.print("ESP-NOW Receiver Ready: ");
@@ -803,7 +799,7 @@ void setup() {
   // BLYNK
   // ----------------------------------------------
 
-  Blynk.config(BLYNK_AUTH_TOKEN);
+  Blynk.config(BLYNK_AUTH_TOKEN, "blynk.cloud", 80);
 
   Serial.println();
   Serial.println("Serial medicine-box tests:");
@@ -852,29 +848,36 @@ void loop() {
 
   uint32_t now = millis();
 
-  // Wi-Fi reconnection.
+  // Wi-Fi and Blynk connection management.
   if (WiFi.status() != WL_CONNECTED) {
 
     if (now - lastWifiTry >= 10000) {
-
       lastWifiTry = now;
-
       Serial.println("Wi-Fi reconnecting...");
-
       WiFi.reconnect();
     }
 
-  } else if (Blynk.connected()) {
+  } else {
 
-    Blynk.run();
+    if (Blynk.connected()) {
+      Blynk.run();
 
-  } else if (now - lastBlynkTry >= 3000) {
+    } else if (now - lastBlynkTry >= 5000) {
 
-    lastBlynkTry = now;
+      lastBlynkTry = now;
 
-    Serial.println("Blynk connecting...");
+      Serial.println("Connecting to Blynk Cloud...");
+      Serial.print("Wi-Fi IP: ");
+      Serial.println(WiFi.localIP());
+      Serial.print("Wi-Fi RSSI: ");
+      Serial.print(WiFi.RSSI());
+      Serial.println(" dBm");
 
-    Blynk.connect(100);
+      bool connected = Blynk.connect(1000);
+
+      Serial.print("Blynk connection result: ");
+      Serial.println(connected ? "SUCCESS" : "FAILED");
+    }
   }
 
   // Periodic status.
